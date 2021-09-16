@@ -216,8 +216,8 @@ Resources:
       NodeRole:  !GetAtt EksNodeRole.Arn
       AmiType: AL2_x86_64
       CapacityType: "ON_DEMAND"
-      RemoteAccess:
-        Ec2SshKey: !If [DeploySSH, !Ref InstancesKey, !Ref AWS::NoValue]
+#      RemoteAccess:
+#        Ec2SshKey: !If [DeploySSH, !Ref InstancesKey, !Ref AWS::NoValue]
       InstanceTypes: 
         - t3.medium
       Labels:
