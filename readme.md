@@ -17,7 +17,7 @@ Si quieres ver que se va a desplegar en tu cuenta puede darle un vistazo a [este
 
  ***¿Como me conecto a mi cluster de EKS?***
  ```sh
-aws eks --region <Region> update-kubeconfig --name eksdemo-cluster
+aws eks --region <Region> update-kubeconfig --name <cluster-name>
 ```
  ***¿Como veo el usuario o rol usado para la ejecución de mis comandos de CLI?***
  ```sh
@@ -29,6 +29,6 @@ aws sts get-caller-identity
 **Free Software, Hell Yeah!**
 
    [df1]: <https://aws.amazon.com/es/cloudformation/>
-   [df2]: <https://github.com/Recad/eks-hands-on>
+   [df2]: <https://github.com/Recad/eks-hands-on/blob/master/Cloudformation/ekstemplate.yaml>
    [df3]: <https://github.com/Recad/eks-hands-on>
  
