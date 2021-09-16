@@ -1,0 +1,236 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template EKSCompleteCluster:
+  Crea un cluster completo de eks con autoscalling y todos los recursos necesarios'
+Parameters:
+  ClsuterName:
+    Description: Nombre del cluster de EKS
+    Type: String
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  InstancesKey:
+    Description: Llave para conección de los nodos de trabajo del cluster
+    Type: String
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+Conditions:
+  DeploySSH: !Not [!Equals [!Ref InstancesKey, ""]] 
+Resources:
+### CONFIGURACIÓN VPC Y SUBNETS#######---------------------------------------------------------------
+  EKSvpc:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsHostnames: true
+      InstanceTenancy: "default"
+      Tags: 
+        - Key: 'project'
+          Value: 'eksdemo'
+        - Key: 'Name'
+          Value: 'eksdemo-vpc'
+
+  PublicSubnet0:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref EKSvpc
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.0.0/24"
+      MapPublicIpOnLaunch: true
+      Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'public-subnet0'
+
+  PublicSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref EKSvpc
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.1.0/24"
+      MapPublicIpOnLaunch: true
+      Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'public-subnet1'
+  
+  PrivateSubnet0:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref EKSvpc
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.3.0/24"
+      MapPublicIpOnLaunch: false
+      Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'private-subnet0'
+
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref EKSvpc
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.4.0/24"
+      MapPublicIpOnLaunch: false
+      Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'private-subnet1'
+
+  InternetGateway:
+      Type: "AWS::EC2::InternetGateway"
+      Properties:
+        Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'igw-eksdemo'
+
+  GatewayToInternet:
+      Type: "AWS::EC2::VPCGatewayAttachment"
+      Properties:
+        VpcId: !Ref EKSvpc
+        InternetGatewayId: !Ref InternetGateway
+  
+  PublicRouteTable:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+        VpcId: !Ref EKSvpc
+        Tags:
+          - Key: 'project'
+            Value: 'eksdemo'
+          - Key: 'Name'
+            Value: 'rt-eksdemo'
+  
+  PublicRoute:
+      Type: "AWS::EC2::Route"
+      DependsOn: "GatewayToInternet"
+      Properties:
+        RouteTableId:  !Ref PublicRouteTable
+        DestinationCidrBlock: "0.0.0.0/0"
+        GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation0:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PublicSubnet0"
+        RouteTableId:
+          Ref: "PublicRouteTable"
+
+  PublicSubnetRouteTableAssociation1:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PublicSubnet1"
+        RouteTableId:
+          Ref: "PublicRouteTable"
+
+####RECURSOS EKS########################--------------------------------------------------------------
+  #service role para eks
+  EksServiceRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "eks.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+      RoleName: !Sub "EksSvcRole-${AWS::StackName}"
+  
+  #Rol para los nodos
+  EksNodeRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      RoleName: !Sub "EksNodeRole-${AWS::StackName}"
+
+  #sec group que permite a los nodos worker comunicarse con el control plane 
+  DataPlaneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: worker nodes to control plane
+        VpcId:
+          Ref: EKSvpc
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.0.3.0/24
+        - IpProtocol: tcp
+          FromPort: 10250
+          ToPort: 10250
+          CidrIp: 10.0.3.0/24
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.0.4.0/24
+        - IpProtocol: tcp
+          FromPort: 10250
+          ToPort: 10250
+          CidrIp: 10.0.4.0/24
+  
+  myCluster:
+    Type: 'AWS::EKS::Cluster'
+    Properties:
+      Name: !Ref ClsuterName
+      Version: '1.21'
+      RoleArn: !GetAtt EksServiceRole.Arn
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref DataPlaneSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet0
+          - !Ref PrivateSubnet1
+
+  EKSNodegroup:
+    Type: 'AWS::EKS::Nodegroup'
+    Properties:
+      ClusterName: !Ref myCluster
+      NodeRole:  !GetAtt EksNodeRole.Arn
+      AmiType: AL2_x86_64
+      CapacityType: "ON_DEMAND"
+      RemoteAccess:
+        Ec2SshKey: !If [DeploySSH, !Ref InstancesKey, !Ref AWS::NoValue]
+      InstanceTypes: 
+        - t3.medium
+      Labels:
+        Project: aws-eks-demo
+      ScalingConfig:
+        MinSize: 1
+        DesiredSize: 1
+        MaxSize: 2
+      Subnets:
+        - !Ref PublicSubnet0
+        - !Ref PublicSubnet1
+      Tags:
+        Name: eksdemo-cluster-Node
+        kubernetes.io/cluster/eksdemo-cluster: owned            
+#Outputs:
+  
