@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minimal-ingress
+  namespace: demo-namespace
+  annotations:
+#    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+# Si no se aplica ninguna regla se usa el backend por defecto
+#  defaultBackend:
+#    resource:
+#      apiGroup: k8s.example.com
+#      kind: StorageBucket
+#      name: static-assets
+  rules:
+  - http:
+      paths:
+      - path: /testpath
+        pathType: Prefix  #lo que inicie con
+#        pathType: Exact  #Que sea exactamente el mismo path (case sensitive)
+#        pathType: ImplementationSpecific  # Se basa en implementación propia de un IngressClass que se puede comportar como los 2 anteriores
+        backend:
+# El tipo recurso hace referencia a otro recurso de K8's y es mutuamente excluyente del servicio 
+#          resource:
+#              apiGroup: k8s.example.com
+#              kind: StorageBucket
+#              name: icon-assets
+          service:
+            name: test
+            port:
+              number: 80

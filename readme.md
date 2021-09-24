@@ -24,7 +24,9 @@ aws eks --region <Region> update-kubeconfig --name <cluster-name>
 aws sts get-caller-identity
 ```
  
-
+## PRIMER DESPLIEGUE.
+Para nuestro primer despliegue usaremos los siguientes recursos:
+- [Deployment][df2].
 
 **Free Software, Hell Yeah!**
 

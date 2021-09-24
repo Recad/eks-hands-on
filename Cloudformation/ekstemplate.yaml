@@ -40,6 +40,8 @@ Resources:
             Value: 'eksdemo'
           - Key: 'Name'
             Value: 'public-subnet0'
+          - Key: kubernetes.io/role/elb
+            Value: 1
 
   PublicSubnet1:
     Type: "AWS::EC2::Subnet"
@@ -53,6 +55,8 @@ Resources:
             Value: 'eksdemo'
           - Key: 'Name'
             Value: 'public-subnet1'
+          - Key: kubernetes.io/role/elb
+            Value: 1
   
   PrivateSubnet0:
     Type: "AWS::EC2::Subnet"
@@ -66,6 +70,8 @@ Resources:
             Value: 'eksdemo'
           - Key: 'Name'
             Value: 'private-subnet0'
+          - Key: kubernetes.io/role/internal-elb
+            Value: 1
 
   PrivateSubnet1:
     Type: "AWS::EC2::Subnet"
@@ -79,6 +85,8 @@ Resources:
             Value: 'eksdemo'
           - Key: 'Name'
             Value: 'private-subnet1'
+          - Key: kubernetes.io/role/internal-elb
+            Value: 1
 
   InternetGateway:
       Type: "AWS::EC2::InternetGateway"
@@ -170,7 +178,23 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
       RoleName: !Sub "EksNodeRole-${AWS::StackName}"
-
+  
+  #policy para el ingresscontroller de eks a ALB
+  controllerPolicy:  
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: root
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: 
+              - "ec2:*"
+              - "elasticloadbalancing:*"
+            Resource: '*'
+      Roles:
+        - !Ref EksNodeRole
+  
   #sec group que permite a los nodos worker comunicarse con el control plane 
   DataPlaneSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -195,7 +219,7 @@ Resources:
           FromPort: 10250
           ToPort: 10250
           CidrIp: 10.0.4.0/24
-  
+  ##Definicion del cluster
   myCluster:
     Type: 'AWS::EKS::Cluster'
     Properties:
@@ -209,6 +233,18 @@ Resources:
           - !Ref PrivateSubnet0
           - !Ref PrivateSubnet1
 
+  vpcCni:
+    Type: AWS::EKS::Addon
+    Properties: 
+      AddonName: "vpc-cni"
+      AddonVersion: "v1.7.5-eksbuild.2"
+      ClusterName: !Ref myCluster
+      ResolveConflicts: "OVERWRITE"
+      Tags: 
+        - Key: 'project'
+          Value: 'eksdemo'
+
+  #Nodos de trabajo del cluster#
   EKSNodegroup:
     Type: 'AWS::EKS::Nodegroup'
     Properties:
