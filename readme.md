@@ -28,7 +28,12 @@ aws sts get-caller-identity
 Para nuestro primer despliegue usaremos los siguientes recursos:
 - [Deployment][df2].
 
-**Free Software, Hell Yeah!**
+## EL TIMÓN DE KUBERNETES (HELM).
+ ```sh
+helm repo add stable https://charts.helm.sh/stable
+helm repo update
+helm repo add eks https://aws.github.io/eks-charts
+```
 
    [df1]: <https://aws.amazon.com/es/cloudformation/>
    [df2]: <https://github.com/Recad/eks-hands-on/blob/master/Cloudformation/ekstemplate.yaml>
