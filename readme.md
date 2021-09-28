@@ -15,6 +15,22 @@ Si quieres ver que se va a desplegar en tu cuenta puede darle un vistazo a [este
 - Ciertos comandos requieren que tengas instaladas las herramientas Kubectl, Helm y Istioctl
 ---
 
+ ***Setear AWS Env vars para CLI en POWERSHELL***
+ ```sh
+$Env:AWS_ACCESS_KEY_ID="USER_ID"
+$Env:AWS_SECRET_ACCESS_KEY="SECRET_ACCESS_KEY"
+```
+
+***Asumir un rol***
+ ```sh
+aws sts assume-role --role-arn <role_arn> --role-session-name <session_name>
+```
+***Setear las credenciales de mi role para usar eks (POWERSHELL)***
+ ```sh
+$Env:AWS_SECRET_ACCESS_KEY="ROLE_ID"
+$Env:AWS_SECRET_ACCESS_KEY="ROLE_ACCESS_KEY"
+$Env:AWS_SESSION_TOKEN="TOKEN"
+```
  ***¿Como me conecto a mi cluster de EKS?***
  ```sh
 aws eks --region <Region> update-kubeconfig --name <cluster-name>
