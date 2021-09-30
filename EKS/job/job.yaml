@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eks-iam-test-dynamo
+spec:
+  template:
+    metadata:
+      labels:
+        app: eks-iam-test-dynamo
+    spec:
+      serviceAccountName: demo-sa
+      containers:
+      - name: eks-iam-test
+        image: 692137641826.dkr.ecr.us-east-1.amazonaws.com/ekshandson:job
+        command: ["python3", "/home/job.py", "name"]
+      restartPolicy: Never
+  backoffLimit: 4

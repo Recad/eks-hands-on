@@ -27,7 +27,7 @@ aws sts assume-role --role-arn <role_arn> --role-session-name <session_name>
 ```
 ***Setear las credenciales de mi role para usar eks (POWERSHELL)***
  ```sh
-$Env:AWS_SECRET_ACCESS_KEY="ROLE_ID"
+$Env:AWS_ACCESS_KEY_ID="ROLE_ID"
 $Env:AWS_SECRET_ACCESS_KEY="ROLE_ACCESS_KEY"
 $Env:AWS_SESSION_TOKEN="TOKEN"
 ```
@@ -39,7 +39,11 @@ aws eks --region <Region> update-kubeconfig --name <cluster-name>
  ```sh
 aws sts get-caller-identity
 ```
- 
+***¿Como ejecuto mi stack?***
+```sh
+aws cloudformation create-stack --stack-name <nombre_stack> --capabilities CAPABILITY_NAMED_IAM --template-body file://users-template.yaml  --parameters "ParameterKey=Nombre, ParameterValue=<mi_nombre>"
+```
+
 ## PRIMER DESPLIEGUE.
 Para nuestro primer despliegue usaremos los siguientes recursos:
 - [Deployment][df2].
@@ -49,6 +53,47 @@ Para nuestro primer despliegue usaremos los siguientes recursos:
 helm repo add stable https://charts.helm.sh/stable
 helm repo update
 helm repo add eks https://aws.github.io/eks-charts
+```
+
+## SERVICEACCOUNT.
+
+***¿como creo veo mi oidc issuer?***
+```sh
+aws eks describe-cluster --name <mi_cluster_name> --query "cluster.identity.oidc.issuer" --output text
+```
+
+***¿como uso mi oidc issuer para mi cluster?***
+```sh
+eksctl utils associate-iam-oidc-provider --cluster <mi cluster> --approve
+```
+
+***¿como uso creo un rol para que lo asuman los pods?***
+```sh
+aws iam create-role --role-name <IAM_ROLE_NAME> --assume-role-policy-document file://trust.json --description "<IAM_ROLE_DESCRIPTION>"
+```
+
+***¿como añado una politica a mi rol?***
+```sh
+aws iam attach-role-policy --role-name <IAM_ROLE_NAME> --policy-arn=arn:aws:iam::692137641826:policy/dynamodbFull-eks
+```
+
+***¿como firmo un serviceaccount para que use mi rol?***
+```sh
+kubectl annotate serviceaccount -n <namespace> <serviceaccountname> eks.amazonaws.com/role-arn=arn:aws:iam::692137641826:role/<role_name>
+```
+
+## ECR.
+***¿Como me logueo al registry de aws?***
+```sh
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 692137641826.dkr.ecr.us-east-1.amazonaws.com
+```
+***Para  construir mi imagen***
+```sh
+docker build -t 692137641826.dkr.ecr.us-east-1.amazonaws.com/ekshandson:<mi_nombre> .
+```
+***Para  subir mi imagen***
+```sh
+docker push 692137641826.dkr.ecr.us-east-1.amazonaws.com/ekshandson:<mi_nombre>
 ```
 
    [df1]: <https://aws.amazon.com/es/cloudformation/>

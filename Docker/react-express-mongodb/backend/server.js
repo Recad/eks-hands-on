@@ -12,14 +12,6 @@ const db = require("./db");
 
 const app = express();
 
-//connection from db here
-db.connect(app);
-
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
 
 //  adding routes
 require("./routes")(app);
